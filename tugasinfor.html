@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalkulator Rumus Pintar</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; padding: 20px; }
+        .container { max-width: 500px; margin: auto; }
+        
+        /* Bar Pencarian */
+        #searchBar {
+            width: 100%; padding: 15px; border-radius: 25px;
+            border: 1px solid #ddd; margin-bottom: 20px; box-sizing: border-box;
+        }
+
+        /* Daftar Rumus */
+        .kartu-rumus {
+            background: white; padding: 15px; border-radius: 12px;
+            Border: 3px solid #23d3d3;
+            margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .btn-buka { background: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 8px; font-weight: bold; }
+
+        /* Gaya Pop-up (Modal) */
+        .modal {
+            display: none; position: fixed; z-index: 1; left: 0; top: 0;
+            width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: white; margin: 20% auto; padding: 20px;
+            border-radius: 15px; width: 80%; max-width: 400px; text-align: center;
+        }
+        input { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; }
+        .btn-hitung { background: #007bff; color: white; border: none; width: 100%; padding: 12px; border-radius: 8px; margin-top: 10px; }
+        .btn-tutup { background: #dc3545; color: white; border: none; margin-top: 15px; padding: 5px 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Kamus & Kalkulator 📐</h2>
+    <input type="text" id="searchBar" placeholder="Cari rumus..." onkeyup="cariRumus()">
+    <div id="daftarRumus"></div>
+</div>
+
+<div id="modalKalkulator" class="modal">
+    <div class="modal-content">
+        <h3 id="judulRumus">Judul</h3>
+        <p id="teksRumus"></p>
+        <div id="inputArea"></div>
+        <button class="btn-hitung" onclick="prosesHitung()">Hitung Hasil</button>
+        <h2 id="hasilHitung">Hasil: -</h2>
+        <button class="btn-tutup" onclick="tutupModal()">Tutup</button>
+    </div>
+</div>
+
+<script>
+    // Database Rumus
+    const kumpulanRumus = [
+        { id: 0, nama: "Luas Persegi", kategori: "Datar", rumus: "s x s", variabel: ["Sisi"] },
+        { id: 1, nama: "Luas Lingkaran", kategori: "Datar", rumus: "π x r²", variabel: ["Jari-jari"] },
+        { id: 2, nama: "Volume Tabung", kategori: "Ruang", rumus: "π x r² x t", variabel: ["Jari-jari", "Tinggi"] },
+        { id: 3, nama: "Luas Segitiga", kategori: "Datar", rumus: "0.5 x a x t", variabel: ["Alas", "Tinggi"] },
+        { id: 4, nama: "Luas Balok", kategori: "Ruang", rumus: "2 x (p  x l + p x t + l x t)", variabel: ["panjang", "lebar", "tinggi"] },
+        { id: 5, nama: "volume balok", kategori: "Ruang", rumus: "p x l x t", variabel: ["panjang", "lebar", "tinggi"]},
+           { id: 6, nama: "Keliling Persegi", kategori: "Datar", rumus: "4 x s", variabel: ["Sisi"] },
+    { id: 7, nama: "Keliling Lingkaran", kategori: "Datar", rumus: "2 x π x r", variabel: ["Jari-jari"] },
+    { id: 8, nama: "Volume Kubus", kategori: "Ruang", rumus: "s³", variabel: ["Sisi"] },
+    { id: 9, nama: "Luas Permukaan Kubus", kategori: "Ruang", rumus: "6 x s²", variabel: ["Sisi"] },
+    { id: 10, nama: "Luas Jajar Genjang", kategori: "Datar", rumus: "a x t", variabel: ["Alas", "Tinggi"] },
+        { id: 11, nama: "Luas Trapesium", kategori: "Datar", rumus: "0.5 x (a + b) x t", variabel: ["Sisi Atas", "Sisi Bawah",  "Tinggi"] },
+    { id: 12, nama: "Luas Layang-layang", kategori: "Datar", rumus: "0.5 x d1 x d2", variabel: ["Diagonal 1", "Diagonal 2"] },
+    { id: 13, nama: "Luas Belah Ketupat", kategori: "Datar", rumus: "0.5 x d1 x d2", variabel: ["Diagonal 1", "Diagonal 2"] },
+    { id: 14, nama: "Volume Kerucut", kategori: "Ruang", rumus: "(1/3) x π x r² x t", variabel: ["Jari-jari", "Tinggi"] },
+    { id: 15, nama: "Luas Permukaan Kerucut", kategori: "Ruang", rumus: "π x r x (r + s)", variabel: ["Jari-jari", "Garis Pelukis (s)"] },
+    { id: 16, nama: "Volume Bola", kategori: "Ruang", rumus: "(4/3) x π x r³", variabel: ["Jari-jari"] },
+    { id: 17, nama: "Luas Permukaan Bola", kategori: "Ruang", rumus: "4 x π x r²", variabel: ["Jari-jari"] },
+    { id: 18, nama: "Volume Prisma Segitiga", kategori: "Ruang", rumus: "(0.5 x a x t_alas) x t_prisma", variabel: ["Alas Segitiga", "Tinggi Segitiga", "Tinggi Prisma"] },
+    { id: 19, nama: "Volume Limas Segiempat", kategori: "Ruang", rumus: "(1/3) x (s x s) x t", variabel: ["Sisi Alas", "Tinggi Limas"] },
+    { id: 20, nama: "Keliling Persegi Panjang", kategori: "Datar", rumus: "2 x (p + l)", variabel: ["Panjang", "Lebar"] }
+        ]
+
+    let rumusAktif = null;
+
+    function tampilkanRumus(data) {
+        const wadah = document.getElementById("daftarRumus");
+        wadah.innerHTML = "";
+        data.forEach(item => {
+            wadah.innerHTML += `
+                <div class="kartu-rumus">
+                    <div>
+                        <h4>${item.nama}</h4>
+                        <p>${item.rumus}</p>
+                    </div>
+                    <button class="btn-buka" onclick="bukaKalkulator(${item.id})">Lihat</button>
+                </div>`;
+        });
+    }
+
+    function bukaKalkulator(id) {
+        rumusAktif = kumpulanRumus.find(r => r.id === id);
+        document.getElementById("judulRumus").innerText = rumusAktif.nama;
+        document.getElementById("teksRumus").innerText = "Rumus: " + rumusAktif.rumus;
+        document.getElementById("hasilHitung").innerText = "Hasil: -";
+        
+        // Munculkan kotak input sesuai jumlah variabel (sisi, jari-jari, dll)
+        const area = document.getElementById("inputArea");
+        area.innerHTML = "";
+        rumusAktif.variabel.forEach((v, index) => {
+            area.innerHTML += `<input type="number" id="val${index}" placeholder="Masukkan ${v}">`;
+        });
+
+        document.getElementById("modalKalkulator").style.display = "block";
+    }
+
+    function prosesHitung() {
+        let nilai = [];
+        rumusAktif.variabel.forEach((v, index) => {
+            nilai.push(parseFloat(document.getElementById(`val${index}`).value));
+        });
+
+        let hasil = 0;
+        // Logika perhitungan berdasarkan ID rumus
+        if (rumusAktif.id === 0) hasil = nilai[0] * nilai[0]; // Persegi
+        if (rumusAktif.id === 1) hasil = Math.PI * Math.pow(nilai[0], 2); // Lingkaran
+        if (rumusAktif.id === 2) hasil = Math.PI * Math.pow(nilai[0], 2) * nilai[1]; // Tabung
+        if (rumusAktif.id === 3) hasil= 0.5 * nilai[0] * nilai[1]; //segitiga 
+        if (rumusAktif.id === 4) hasil = 2 * (nilai[0] * nilai[1] + nilai[0] * nilai[2] + nilai[1] * nilai[2]); //L balok
+        if (rumusAktif.id === 5) hasil = nilai[0] * nilai[1] * nilai[2]; //V balok
+        if (rumusAktif.id === 6) hasil = 4 * nilai [0];
+        if(rumusAktif.id === 7) hasil = 2 * Math.PI * nilai[0];
+        if(rumusAktif.id === 8) hasil = Math.pow(nilai[0], 3);
+        if(rumusAktif.id === 9) hasil = 6 * Math.pow(nilai[0], 2);
+        if(rumusAktif.id === 10) hasil = nilai[0] * nilai[1];
+        if(rumusAktif.id === 11) hasil = (0.5 * (nilai[0] + nilai[1])) * nilai[2];
+        if(rumusAktif.id === 12) hasil = (0.5 * nilai[0] * nilai[1]);
+        if(rumusAktif.id === 13) hasil = 0.5 * nilai[0] * nilai [1];
+        if(rumusAktif.id === 14) hasil = (1/3) * Math.PI * Math.pow(nilai[0], 2) * nilai[1];
+        if(rumusAktif.id === 15) hasil = Math.PI * nilai[0] * (nilai[0] + nilai[1]);
+        if(rumusAktif.id === 16) hasil = (4/3) * Math.PI * Math.pow(nilai[0], 3);
+        if(rumusAktif.id === 17) hasil = 4 * Math.PI * Math.pow(nilai[0], 2);
+        if(rumusAktif.id === 18) hasil = (0,5 * nilai[0] * nilai[1]) * nilai[2];
+        if(rumusAktif.id === 19) hasil = (1/3) * (nilai[0] * nilai[0]) * nilai[1];
+        if(rumusAktif.id === 20) hasil = 2 * (nilai[0] + nilai[1]);
+        
+        
+        document.getElementById("hasilHitung").innerText = "Hasil: " + hasil.toFixed(2);
+    }
+
+    function tutupModal() { document.getElementById("modalKalkulator").style.display = "none"; }
+    
+    function cariRumus() {
+    let input = document.getElementById("searchBar").value.toLowerCase();
+    let hasilFilter = kumpulanRumus.filter(item => item.nama.toLowerCase().includes(input));
+    tampilkanRumus(hasilFilter);
+}
+
+
+    tampilkanRumus(kumpulanRumus);
+</script>
+
+</body>
+</html>
